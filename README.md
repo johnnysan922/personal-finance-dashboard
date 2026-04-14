@@ -16,6 +16,43 @@ personal-finance-dashboard/
 └── docs/adr/          # Architecture decision records
 ```
 
+## Current project state (MVP scaffold)
+
+This repository currently contains a working end-to-end scaffold you can run locally.
+
+### Implemented
+
+- **Live dashboard shell** with `Watchlist`, `PriceChart`, `Portfolio`, `PnLSummary`, and `AddPosition` components.
+- **Backend REST endpoints**
+  - `GET /health`
+  - `GET /api/prices/{symbol}`
+  - `GET /api/history/{symbol}?period=1d`
+  - `GET /api/portfolio`
+  - `POST /api/portfolio`
+- **WebSocket price updates**
+  - `GET ws://127.0.0.1:8000/ws/prices`
+  - Backend polls Yahoo on an interval and broadcasts normalized ticks to connected clients.
+- **Persistence**
+  - SQLAlchemy model for portfolio positions.
+  - SQLite by default via `DATABASE_URL=sqlite:///./portfolio.db`.
+- **Provider abstraction**
+  - Yahoo is wired as v1 provider behind backend provider interfaces (per ADR 0001).
+
+### Current behavior details
+
+- Chart symbol is currently fixed to `AAPL` in the frontend scaffold.
+- Watchlist defaults to `AAPL`, `MSFT`, `GOOG` plus symbols from saved positions.
+- Total P&L is implemented from position cost basis vs latest streamed price (fallback to cost when price is missing).
+- Day P&L is currently a placeholder (`—`) and not implemented yet.
+
+### Not implemented yet (planned next)
+
+- Position edit/delete flows.
+- Watchlist management UI.
+- Chart symbol selector and richer time ranges.
+- Auth/multi-user support.
+- Production-grade stream provider migration (Alpaca/Polygon adapter implementation).
+
 ## Run locally
 
 **Backend** (Python 3.9+):
