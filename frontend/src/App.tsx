@@ -1,0 +1,119 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AddPosition } from "./components/AddPosition";
+import { PnLSummary } from "./components/PnLSummary";
+import { Portfolio } from "./components/Portfolio";
+import { PriceChart } from "./components/PriceChart";
+import { Watchlist } from "./components/Watchlist";
+import { usePrices } from "./hooks/usePrices";
+import { useWebSocket } from "./hooks/useWebSocket";
+import { getApiBase } from "./lib/api";
+import { usePortfolioStore } from "./store/portfolioStore";
+import type { HistoryPoint } from "./types";
+
+const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "GOOG"];
+const CHART_SYMBOL = "AAPL";
+
+export default function App() {
+  const { positions, loading, error, fetchPositions } = usePortfolioStore();
+  const { bySymbol, applyTick } = usePrices();
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const onWsMessage = useCallback(
+    (data: unknown) => applyTick(data),
+    [applyTick],
+  );
+  useWebSocket({ onMessage: onWsMessage });
+
+  useEffect(() => {
+    void fetchPositions();
+  }, [fetchPositions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHistoryLoading(true);
+    fetch(
+      `${getApiBase()}/api/history/${CHART_SYMBOL}?period=1d`,
+    )
+      .then((r) => r.json())
+      .then((data: HistoryPoint[]) => {
+        if (!cancelled) setHistory(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setHistory([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const watchSymbols = useMemo(() => {
+    const fromPortfolio = positions.map((p) => p.symbol);
+    const set = new Set([...DEFAULT_WATCHLIST, ...fromPortfolio]);
+    return Array.from(set);
+  }, [positions]);
+
+  const { totalCost, totalMarketValue } = useMemo(() => {
+    let cost = 0;
+    let mkt = 0;
+    for (const p of positions) {
+      const c = p.quantity * p.averageCost;
+      cost += c;
+      const last = bySymbol[p.symbol]?.price;
+      mkt += last !== undefined ? last * p.quantity : c;
+    }
+    return { totalCost: cost, totalMarketValue: mkt };
+  }, [positions, bySymbol]);
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Market dashboard
+          </h1>
+          <p className="text-sm text-slate-400">
+            Yahoo-backed quotes (v1) · live stream via WebSocket
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="self-start rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+        >
+          Add position
+        </button>
+      </header>
+
+      <div className="space-y-6">
+        <PnLSummary
+          totalMarketValue={totalMarketValue}
+          totalCost={totalCost}
+          dayPnl={null}
+        />
+        <Watchlist symbols={watchSymbols} prices={bySymbol} />
+        <PriceChart
+          symbol={CHART_SYMBOL}
+          data={history}
+          loading={historyLoading}
+        />
+        <Portfolio
+          positions={positions}
+          prices={bySymbol}
+          loading={loading}
+          error={error}
+        />
+      </div>
+
+      <AddPosition
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onCreated={() => void fetchPositions()}
+      />
+    </div>
+  );
+}
