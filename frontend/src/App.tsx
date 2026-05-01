@@ -11,11 +11,11 @@ import { usePortfolioStore } from "./store/portfolioStore";
 import type { HistoryPoint } from "./types";
 
 const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "GOOG"];
-const CHART_SYMBOL = "AAPL";
 
 export default function App() {
   const { positions, loading, error, fetchPositions } = usePortfolioStore();
   const { bySymbol, applyTick } = usePrices();
+  const [chartSymbol, setChartSymbol] = useState(DEFAULT_WATCHLIST[0]!);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -31,25 +31,24 @@ export default function App() {
   }, [fetchPositions]);
 
   useEffect(() => {
-    let cancelled = false;
+    const ac = new AbortController();
     setHistoryLoading(true);
-    fetch(
-      `${getApiBase()}/api/history/${CHART_SYMBOL}?period=1d`,
-    )
+    const url = `${getApiBase()}/api/history/${encodeURIComponent(chartSymbol)}?period=1d`;
+    fetch(url, { signal: ac.signal })
       .then((r) => r.json())
       .then((data: HistoryPoint[]) => {
-        if (!cancelled) setHistory(Array.isArray(data) ? data : []);
+        setHistory(Array.isArray(data) ? data : []);
       })
-      .catch(() => {
-        if (!cancelled) setHistory([]);
+      .catch((e: unknown) => {
+        const aborted =
+          e instanceof DOMException && e.name === "AbortError";
+        if (!aborted) setHistory([]);
       })
       .finally(() => {
-        if (!cancelled) setHistoryLoading(false);
+        if (!ac.signal.aborted) setHistoryLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return () => ac.abort();
+  }, [chartSymbol]);
 
   const watchSymbols = useMemo(() => {
     const fromPortfolio = positions.map((p) => p.symbol);
@@ -95,9 +94,15 @@ export default function App() {
           totalCost={totalCost}
           dayPnl={null}
         />
-        <Watchlist symbols={watchSymbols} prices={bySymbol} />
+        <Watchlist
+          symbols={watchSymbols}
+          prices={bySymbol}
+          selectedSymbol={chartSymbol}
+          onSelectSymbol={setChartSymbol}
+        />
         <PriceChart
-          symbol={CHART_SYMBOL}
+          key={chartSymbol}
+          symbol={chartSymbol}
           data={history}
           loading={historyLoading}
         />

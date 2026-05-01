@@ -40,7 +40,7 @@ This repository currently contains a working end-to-end scaffold you can run loc
 
 ### Current behavior details
 
-- Chart symbol is currently fixed to `AAPL` in the frontend scaffold.
+- Chart symbol is selected from the watchlist (default starts at `AAPL`); changing selection refetches history.
 - Watchlist defaults to `AAPL`, `MSFT`, `GOOG` plus symbols from saved positions.
 - Total P&L is implemented from position cost basis vs latest streamed price (fallback to cost when price is missing).
 - Day P&L is currently a placeholder (`—`) and not implemented yet.
