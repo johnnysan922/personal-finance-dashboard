@@ -44,6 +44,7 @@ This repository currently contains a working end-to-end scaffold you can run loc
 ### Current behavior details
 
 - Chart symbol is selected from the watchlist (default starts at `AAPL`); changing selection refetches history.
+- Chart range selector supports `1d`, `5d`, and `1mo` with refetch-on-change.
 - Watchlist defaults to `AAPL`, `MSFT`, `GOOG` plus symbols from saved positions.
 - Portfolio rows support inline edit and delete actions.
 - Total P&L is implemented from position cost basis vs latest streamed price (fallback to cost when price is missing).
@@ -52,7 +53,6 @@ This repository currently contains a working end-to-end scaffold you can run loc
 ### Not implemented yet (planned next)
 
 - Watchlist management UI.
-- Chart symbol selector and richer time ranges.
 - Auth/multi-user support.
 - Production-grade stream provider migration (Alpaca/Polygon adapter implementation).
 

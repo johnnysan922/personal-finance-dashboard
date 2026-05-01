@@ -7,6 +7,12 @@ from app.providers.base import Candle, MarketDataProvider, Quote, QuoteSnapshot
 
 
 class YahooProvider:
+    _INTERVAL_BY_PERIOD = {
+        "1d": "5m",
+        "5d": "15m",
+        "1mo": "1h",
+    }
+
     """Yahoo Finance via `yfinance` (ADR 0001). Swap for Alpaca/Polygon later."""
 
     def get_quote(self, symbol: str) -> Quote:
@@ -45,7 +51,9 @@ class YahooProvider:
 
     def get_history(self, symbol: str, period: str) -> list[Candle]:
         t = yf.Ticker(symbol)
-        df = t.history(period=period or "1d", interval="5m", auto_adjust=True)
+        p = (period or "1d").strip()
+        interval = self._INTERVAL_BY_PERIOD.get(p, "1d")
+        df = t.history(period=p, interval=interval, auto_adjust=True)
         if df.empty:
             return []
         out: list[Candle] = []

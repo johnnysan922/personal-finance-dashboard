@@ -11,6 +11,8 @@ import { usePortfolioStore } from "./store/portfolioStore";
 import type { HistoryPoint, PriceSnapshot } from "./types";
 
 const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "GOOG"];
+const CHART_PERIODS = ["1d", "5d", "1mo"] as const;
+type ChartPeriod = (typeof CHART_PERIODS)[number];
 
 export default function App() {
   const {
@@ -23,6 +25,7 @@ export default function App() {
   } = usePortfolioStore();
   const { bySymbol, applyTick } = usePrices();
   const [chartSymbol, setChartSymbol] = useState(DEFAULT_WATCHLIST[0]!);
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("1d");
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [previousCloseBySymbol, setPreviousCloseBySymbol] = useState<
@@ -43,7 +46,7 @@ export default function App() {
   useEffect(() => {
     const ac = new AbortController();
     setHistoryLoading(true);
-    const url = `${getApiBase()}/api/history/${encodeURIComponent(chartSymbol)}?period=1d`;
+    const url = `${getApiBase()}/api/history/${encodeURIComponent(chartSymbol)}?period=${encodeURIComponent(chartPeriod)}`;
     fetch(url, { signal: ac.signal })
       .then((r) => r.json())
       .then((data: HistoryPoint[]) => {
@@ -58,7 +61,7 @@ export default function App() {
         if (!ac.signal.aborted) setHistoryLoading(false);
       });
     return () => ac.abort();
-  }, [chartSymbol]);
+  }, [chartSymbol, chartPeriod]);
 
   const watchSymbols = useMemo(() => {
     const fromPortfolio = positions.map((p) => p.symbol);
@@ -153,8 +156,30 @@ export default function App() {
           selectedSymbol={chartSymbol}
           onSelectSymbol={setChartSymbol}
         />
+        <section className="flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-wide text-slate-500">
+            Range
+          </span>
+          {CHART_PERIODS.map((period) => {
+            const active = period === chartPeriod;
+            return (
+              <button
+                key={period}
+                type="button"
+                onClick={() => setChartPeriod(period)}
+                className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? "border-sky-500 bg-sky-950/50 text-sky-300"
+                    : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500"
+                }`}
+              >
+                {period}
+              </button>
+            );
+          })}
+        </section>
         <PriceChart
-          key={chartSymbol}
+          key={`${chartSymbol}-${chartPeriod}`}
           symbol={chartSymbol}
           data={history}
           loading={historyLoading}
