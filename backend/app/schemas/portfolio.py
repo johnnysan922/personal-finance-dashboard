@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -12,3 +14,9 @@ class PositionRead(BaseModel):
     symbol: str
     quantity: float
     averageCost: float
+
+
+class PositionUpdate(BaseModel):
+    symbol: Optional[str] = Field(default=None, min_length=1, max_length=32)
+    quantity: Optional[float] = Field(default=None, gt=0)
+    averageCost: Optional[float] = Field(default=None, gt=0)

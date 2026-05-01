@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.portfolio import PositionRow
-from app.schemas.portfolio import PositionCreate, PositionRead
+from app.schemas.portfolio import PositionCreate, PositionRead, PositionUpdate
 
 router = APIRouter()
 
@@ -41,3 +41,37 @@ def create_position(
     db.commit()
     db.refresh(row)
     return _to_read(row)
+
+
+@router.patch("/portfolio/{position_id}", response_model=PositionRead)
+def update_position(
+    position_id: int,
+    body: PositionUpdate,
+    db: Session = Depends(get_db),
+) -> PositionRead:
+    row = db.get(PositionRow, position_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Position not found")
+
+    if body.symbol is not None:
+        sym = body.symbol.strip().upper()
+        if not sym:
+            raise HTTPException(status_code=400, detail="Invalid symbol")
+        row.symbol = sym
+    if body.quantity is not None:
+        row.quantity = body.quantity
+    if body.averageCost is not None:
+        row.average_cost = body.averageCost
+
+    db.commit()
+    db.refresh(row)
+    return _to_read(row)
+
+
+@router.delete("/portfolio/{position_id}", status_code=204)
+def delete_position(position_id: int, db: Session = Depends(get_db)) -> None:
+    row = db.get(PositionRow, position_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Position not found")
+    db.delete(row)
+    db.commit()

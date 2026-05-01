@@ -13,7 +13,14 @@ import type { HistoryPoint } from "./types";
 const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "GOOG"];
 
 export default function App() {
-  const { positions, loading, error, fetchPositions } = usePortfolioStore();
+  const {
+    positions,
+    loading,
+    error,
+    fetchPositions,
+    updatePosition,
+    deletePosition,
+  } = usePortfolioStore();
   const { bySymbol, applyTick } = usePrices();
   const [chartSymbol, setChartSymbol] = useState(DEFAULT_WATCHLIST[0]!);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -111,6 +118,8 @@ export default function App() {
           prices={bySymbol}
           loading={loading}
           error={error}
+          onUpdatePosition={updatePosition}
+          onDeletePosition={deletePosition}
         />
       </div>
 

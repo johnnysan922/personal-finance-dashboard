@@ -29,6 +29,8 @@ This repository currently contains a working end-to-end scaffold you can run loc
   - `GET /api/history/{symbol}?period=1d`
   - `GET /api/portfolio`
   - `POST /api/portfolio`
+  - `PATCH /api/portfolio/{id}`
+  - `DELETE /api/portfolio/{id}`
 - **WebSocket price updates**
   - `GET ws://127.0.0.1:8000/ws/prices`
   - Backend polls Yahoo on an interval and broadcasts normalized ticks to connected clients.
@@ -42,12 +44,12 @@ This repository currently contains a working end-to-end scaffold you can run loc
 
 - Chart symbol is selected from the watchlist (default starts at `AAPL`); changing selection refetches history.
 - Watchlist defaults to `AAPL`, `MSFT`, `GOOG` plus symbols from saved positions.
+- Portfolio rows support inline edit and delete actions.
 - Total P&L is implemented from position cost basis vs latest streamed price (fallback to cost when price is missing).
 - Day P&L is currently a placeholder (`—`) and not implemented yet.
 
 ### Not implemented yet (planned next)
 
-- Position edit/delete flows.
 - Watchlist management UI.
 - Chart symbol selector and richer time ranges.
 - Auth/multi-user support.
