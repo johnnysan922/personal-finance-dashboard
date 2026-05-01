@@ -8,7 +8,7 @@ import { usePrices } from "./hooks/usePrices";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { getApiBase } from "./lib/api";
 import { usePortfolioStore } from "./store/portfolioStore";
-import type { HistoryPoint } from "./types";
+import type { HistoryPoint, PriceSnapshot } from "./types";
 
 const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "GOOG"];
 
@@ -25,6 +25,9 @@ export default function App() {
   const [chartSymbol, setChartSymbol] = useState(DEFAULT_WATCHLIST[0]!);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [previousCloseBySymbol, setPreviousCloseBySymbol] = useState<
+    Record<string, number>
+  >({});
   const [addOpen, setAddOpen] = useState(false);
 
   const onWsMessage = useCallback(
@@ -63,17 +66,60 @@ export default function App() {
     return Array.from(set);
   }, [positions]);
 
-  const { totalCost, totalMarketValue } = useMemo(() => {
+  useEffect(() => {
+    if (watchSymbols.length === 0) {
+      setPreviousCloseBySymbol({});
+      return;
+    }
+    const ac = new AbortController();
+    const qs = watchSymbols.map(encodeURIComponent).join(",");
+    fetch(`${getApiBase()}/api/prices/snapshot?symbols=${qs}`, {
+      signal: ac.signal,
+    })
+      .then((r) => r.json())
+      .then((rows: PriceSnapshot[]) => {
+        if (!Array.isArray(rows)) return;
+        const next: Record<string, number> = {};
+        for (const row of rows) {
+          if (
+            row &&
+            typeof row.symbol === "string" &&
+            typeof row.previousClose === "number"
+          ) {
+            next[row.symbol] = row.previousClose;
+          }
+        }
+        setPreviousCloseBySymbol(next);
+      })
+      .catch((e: unknown) => {
+        const aborted = e instanceof DOMException && e.name === "AbortError";
+        if (!aborted) setPreviousCloseBySymbol({});
+      });
+    return () => ac.abort();
+  }, [watchSymbols]);
+
+  const { totalCost, totalMarketValue, dayPnl } = useMemo(() => {
     let cost = 0;
     let mkt = 0;
+    let day = 0;
+    let hasDay = false;
     for (const p of positions) {
       const c = p.quantity * p.averageCost;
       cost += c;
       const last = bySymbol[p.symbol]?.price;
       mkt += last !== undefined ? last * p.quantity : c;
+      const previousClose = previousCloseBySymbol[p.symbol];
+      if (last !== undefined && previousClose !== undefined) {
+        day += p.quantity * (last - previousClose);
+        hasDay = true;
+      }
     }
-    return { totalCost: cost, totalMarketValue: mkt };
-  }, [positions, bySymbol]);
+    return {
+      totalCost: cost,
+      totalMarketValue: mkt,
+      dayPnl: hasDay ? day : null,
+    };
+  }, [positions, bySymbol, previousCloseBySymbol]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -99,7 +145,7 @@ export default function App() {
         <PnLSummary
           totalMarketValue={totalMarketValue}
           totalCost={totalCost}
-          dayPnl={null}
+          dayPnl={dayPnl}
         />
         <Watchlist
           symbols={watchSymbols}

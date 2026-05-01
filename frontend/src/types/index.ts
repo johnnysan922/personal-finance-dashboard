@@ -5,6 +5,14 @@ export interface PriceTick {
   timestamp: string;
 }
 
+export interface PriceSnapshot {
+  symbol: string;
+  price: number;
+  previousClose?: number;
+  currency?: string;
+  timestamp: string;
+}
+
 export interface Asset {
   symbol: string;
   name?: string;

@@ -26,6 +26,7 @@ This repository currently contains a working end-to-end scaffold you can run loc
 - **Backend REST endpoints**
   - `GET /health`
   - `GET /api/prices/{symbol}`
+  - `GET /api/prices/snapshot?symbols=AAPL,MSFT`
   - `GET /api/history/{symbol}?period=1d`
   - `GET /api/portfolio`
   - `POST /api/portfolio`
@@ -46,7 +47,7 @@ This repository currently contains a working end-to-end scaffold you can run loc
 - Watchlist defaults to `AAPL`, `MSFT`, `GOOG` plus symbols from saved positions.
 - Portfolio rows support inline edit and delete actions.
 - Total P&L is implemented from position cost basis vs latest streamed price (fallback to cost when price is missing).
-- Day P&L is currently a placeholder (`—`) and not implemented yet.
+- Day P&L is calculated from live last price vs previous close when previous close data is available.
 
 ### Not implemented yet (planned next)
 

@@ -3,7 +3,7 @@ from typing import Optional
 
 import yfinance as yf
 
-from app.providers.base import Candle, MarketDataProvider, Quote
+from app.providers.base import Candle, MarketDataProvider, Quote, QuoteSnapshot
 
 
 class YahooProvider:
@@ -19,6 +19,29 @@ class YahooProvider:
             price = float(hist["Close"].iloc[-1])
         cur = t.fast_info.get("currency") or t.info.get("currency")
         return Quote(symbol=symbol.upper(), price=float(price), currency=cur)
+
+    def get_quote_snapshot(self, symbol: str) -> QuoteSnapshot:
+        t = yf.Ticker(symbol)
+        price = t.fast_info.get("last_price") or t.info.get("currentPrice")
+        prev_close = (
+            t.fast_info.get("previous_close")
+            or t.info.get("previousClose")
+            or t.info.get("regularMarketPreviousClose")
+        )
+        if price is None:
+            hist = t.history(period="2d")
+            if hist.empty:
+                raise ValueError(f"No price for {symbol!r}")
+            price = float(hist["Close"].iloc[-1])
+            if prev_close is None and len(hist) >= 2:
+                prev_close = float(hist["Close"].iloc[-2])
+        cur = t.fast_info.get("currency") or t.info.get("currency")
+        return QuoteSnapshot(
+            symbol=symbol.upper(),
+            price=float(price),
+            previous_close=float(prev_close) if prev_close is not None else None,
+            currency=cur,
+        )
 
     def get_history(self, symbol: str, period: str) -> list[Candle]:
         t = yf.Ticker(symbol)

@@ -18,7 +18,16 @@ class Candle(BaseModel):
     volume: Optional[float] = None
 
 
+class QuoteSnapshot(BaseModel):
+    symbol: str
+    price: float
+    previous_close: Optional[float] = None
+    currency: Optional[str] = None
+
+
 class MarketDataProvider(Protocol):
     def get_quote(self, symbol: str) -> Quote: ...
 
     def get_history(self, symbol: str, period: str) -> list[Candle]: ...
+
+    def get_quote_snapshot(self, symbol: str) -> QuoteSnapshot: ...
